@@ -21,11 +21,16 @@ import dl.helpers.utils
 
 @pytest.fixture
 def url_verify():
+    # This is my dev server
     return ( "https://webap.ls4-nersc-gaia-dr3.development.svc.spin.nersc.org/gaiarect", False )
-
+    # This is the production server for use with LS4
+    # return( "https://ls4-gaia-dr3.lbl.gov/gaiarect", True )
+    
 @pytest.fixture
 def sky_range():
     return ( 30., 30.15, -20.15, -20. )
+
+# TODO : come up with a sky range that spans a healpix boundry or two
 
 def test_server( url_verify, sky_range ):
     url, verify = url_verify
@@ -49,6 +54,28 @@ def test_server( url_verify, sky_range ):
     assert min( data['phot_g_mean_mag'] ) == pytest.approx( 14.48, abs=0.01 )
     assert max( data['phot_g_mean_mag'] ) == pytest.approx( 21.60, abs=0.01 )
 
+def test_minmaxmag( url_verify, sky_range ):
+    url, verify = url_verify
+    ra0, ra1, dec0, dec1 = sky_range
+
+    res = requests.post( f"{url}/{ra0}/{ra1}/{dec0}/{dec1}/20.", verify=verify )
+    assert res.status_code == 200
+
+    data = res.json()
+    assert len( data['ra'] ) == 27
+    assert min( data['phot_g_mean_mag'] ) == pytest.approx( 14.48, abs=0.01 )
+    assert max( data['phot_g_mean_mag'] ) == pytest.approx( 19.93, abs=0.01 )
+
+    res = requests.post( f"{url}/{ra0}/{ra1}/{dec0}/{dec1}/20./18.", verify=verify )
+    assert res.status_code == 200
+    
+    data = res.json()
+    assert len( data['ra'] ) == 14
+    assert min( data['phot_g_mean_mag'] ) == pytest.approx( 18.03, abs=0.01 )
+    assert max( data['phot_g_mean_mag'] ) == pytest.approx( 19.93, abs=0.01 )
+
+    
+    
 def test_server_rawrap( url_verify ):
     url, verify = url_verify
     ra0 = 359.9
