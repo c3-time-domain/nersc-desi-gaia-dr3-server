@@ -50,8 +50,8 @@ ENV PATH=/venv/bin:$PATH
 COPY --from=build /code/ /code/
 WORKDIR /code
 
-# This next one gets bind mounted to /global/cfs/cdirs/desi/target/gaia_dr3/healpix
-RUN mkdir /gaia
+# This next one gets bind mounted to /global/cfs/cdirs/cosmo/data/gaia/dr3/healpix
+RUN mkdir /data
 
 CMD [ "gunicorn", "-w", "4", "-b", "0.0.0.0:8080", "--timeout", "0", \
       "webservice:app" ]
