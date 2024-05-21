@@ -26,10 +26,10 @@ app.logger.setLevel( logging.DEBUG )
 
 # TODO : Implement minmag, maxmag
 
-# @app.route( "/gaiarect/<string:ra0>/<string:ra1>/<string:dec0>/<string:dec1>/<string:maxmag>",
-#             methods=['GET','POST'], strict_slashes=False )
-# @app.route( "/gaiarect/<string:ra0>/<string:ra1>/<string:dec0>/<string:dec1>/<string:maxmag>/<string:minmag>",
-#             methods=['GET','POST'], strict_slashes=False )
+@app.route( "/gaiarect/<string:ra0>/<string:ra1>/<string:dec0>/<string:dec1>/<string:maxmag>",
+            methods=['GET','POST'], strict_slashes=False )
+@app.route( "/gaiarect/<string:ra0>/<string:ra1>/<string:dec0>/<string:dec1>/<string:maxmag>/<string:minmag>",
+            methods=['GET','POST'], strict_slashes=False )
 @app.route( "/gaiarect/<string:ra0>/<string:ra1>/<string:dec0>/<string:dec1>",
             methods=['GET','POST'], strict_slashes=False )
 def gaiarect( ra0, ra1, dec0, dec1, maxmag=None, minmag=None ):
@@ -38,6 +38,8 @@ def gaiarect( ra0, ra1, dec0, dec1, maxmag=None, minmag=None ):
         ra1 = float(ra1)
         dec0 = float(dec0)
         dec1 = float(dec1)
+        maxmag = None if maxmag is None else float(maxmag)
+        minmag = None if minmag is None else float(minmag)
     except Exception as ex:
         app.logger.error( ex )
         return f"Error converting ra/dec values to float", 500
@@ -127,6 +129,10 @@ def gaiarect( ra0, ra1, dec0, dec1, maxmag=None, minmag=None ):
             t = t[ ( t['RA'] >= ra0 ) | ( t['RA'] <= ra1 ) ]
         else:
             t = t[ ( t['RA'] >= ra0 ) & ( t['RA'] <= ra1 ) ]
+        if maxmag is not None:
+            t = t[ t['PHOT_G_MEAN_MAG'] <= maxmag ]
+        if minmag is not None:
+            t = t[ t['PHOT_G_MEAN_MAG'] >= minmag ]
         app.logger.debug( f"{len(t)} stars from healpix {hp}" )
         for kw in retval.keys():
             # Gotta convert to floats because the json
