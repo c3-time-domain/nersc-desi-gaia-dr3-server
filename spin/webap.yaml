@@ -1,9 +1,9 @@
 ---
 apiVersion: apps/v1
-kind: Production
+kind: Deployment
 metadata:
   labels:
-    workload.user.cattle.io/workloadselector: production-ls4-nersc-gaia-dr3-webap
+    workload.user.cattle.io/workloadselector: deployment-ls4-nersc-gaia-dr3-webap
   name: webap
   namespace: ls4-nersc-gaia-dr3
 spec:
@@ -12,7 +12,7 @@ spec:
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      workload.user.cattle.io/workloadselector: production-ls4-nersc-gaia-dr3-webap
+      workload.user.cattle.io/workloadselector: deployment-ls4-nersc-gaia-dr3-webap
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -21,7 +21,7 @@ spec:
   template:
     metadata:
       labels:
-        workload.user.cattle.io/workloadselector: production-ls4-nersc-gaia-dr3-webap
+        workload.user.cattle.io/workloadselector: deployment-ls4-nersc-gaia-dr3-webap
     spec:
       containers:
       - image: registry.nersc.gov/m4616/raknop/nersc-desi-gaia-dr3-server
@@ -84,7 +84,7 @@ spec:
     protocol: TCP
     targetPort: 42
   selector:
-    workload.user.cattle.io/workloadselector: production-ls4-nersc-gaia-dr3-webap
+    workload.user.cattle.io/workloadselector: deployment-ls4-nersc-gaia-dr3-webap
   sessionAffinity: None
   type: ClusterIP
 status:
@@ -101,7 +101,7 @@ spec:
     protocol: TCP
     targetPort: 8080
   selector:
-    workload.user.cattle.io/workloadselector: production-ls4-nersc-gaia-dr3-webap
+    workload.user.cattle.io/workloadselector: deployment-ls4-nersc-gaia-dr3-webap
   sessionAffinity: None
   type: ClusterIP
 status:
@@ -123,17 +123,17 @@ spec:
             port:
               number: 8080
         pathType: ImplementationSpecific
-#   - host: ls4-gaia-dr3.lbl.gov
-#     http:
-#       paths:
-#       - backend:
-#           service:
-#             name: webap-ingress
-#             port:
-#               number: 8080
-#         pathType: ImplementationSpecific
-#   tls:
-#   - hosts:
-#     - ls4-gaia-dr3.lbl.gov
-#     secretName: webap-cert
+  - host: ls4-gaia-dr3.lbl.gov
+    http:
+      paths:
+      - backend:
+          service:
+            name: webap-ingress
+            port:
+              number: 8080
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - ls4-gaia-dr3.lbl.gov
+    secretName: webap-cert
 ---
