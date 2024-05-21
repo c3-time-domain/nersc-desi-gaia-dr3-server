@@ -22,9 +22,9 @@ import dl.helpers.utils
 @pytest.fixture
 def url_verify():
     # This is my dev server
-    return ( "https://webap.ls4-nersc-gaia-dr3.development.svc.spin.nersc.org/gaiarect", False )
+    # return ( "https://webap.ls4-nersc-gaia-dr3.development.svc.spin.nersc.org/gaiarect", False )
     # This is the production server for use with LS4
-    # return( "https://ls4-gaia-dr3.lbl.gov/gaiarect", True )
+    return( "https://ls4-gaia-dr3.lbl.gov/gaiarect", True )
     
 @pytest.fixture
 def sky_range():
