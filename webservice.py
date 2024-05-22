@@ -20,11 +20,9 @@ import healpy
 import flask
 
 app = flask.Flask( __name__, instance_relative_config=True )
-# app.logger.setLevel( logging.INFO )
-app.logger.setLevel( logging.DEBUG )
+app.logger.setLevel( logging.INFO )
+# app.logger.setLevel( logging.DEBUG )
 
-
-# TODO : Implement minmag, maxmag
 
 @app.route( "/gaiarect/<string:ra0>/<string:ra1>/<string:dec0>/<string:dec1>/<string:maxmag>",
             methods=['GET','POST'], strict_slashes=False )
