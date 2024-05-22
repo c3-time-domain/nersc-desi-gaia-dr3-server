@@ -16,16 +16,18 @@
 import pytest
 import requests
 
+import numpy
+
 from dl import queryClient
 import dl.helpers.utils
 
 @pytest.fixture
 def url_verify():
     # This is my dev server
-    # return ( "https://webap.ls4-nersc-gaia-dr3.development.svc.spin.nersc.org/gaiarect", False )
+    return ( "https://webap.ls4-nersc-gaia-dr3.development.svc.spin.nersc.org/gaiarect", False )
     # This is the production server for use with LS4
-    return( "https://ls4-gaia-dr3.lbl.gov/gaiarect", True )
-    
+    # return( "https://ls4-gaia-dr3.lbl.gov/gaiarect", True )
+
 @pytest.fixture
 def sky_range():
     return ( 30., 30.15, -20.15, -20. )
@@ -54,6 +56,7 @@ def test_server( url_verify, sky_range ):
     assert min( data['phot_g_mean_mag'] ) == pytest.approx( 14.48, abs=0.01 )
     assert max( data['phot_g_mean_mag'] ) == pytest.approx( 21.60, abs=0.01 )
 
+
 def test_minmaxmag( url_verify, sky_range ):
     url, verify = url_verify
     ra0, ra1, dec0, dec1 = sky_range
@@ -68,14 +71,13 @@ def test_minmaxmag( url_verify, sky_range ):
 
     res = requests.post( f"{url}/{ra0}/{ra1}/{dec0}/{dec1}/20./18.", verify=verify )
     assert res.status_code == 200
-    
+
     data = res.json()
     assert len( data['ra'] ) == 14
     assert min( data['phot_g_mean_mag'] ) == pytest.approx( 18.03, abs=0.01 )
     assert max( data['phot_g_mean_mag'] ) == pytest.approx( 19.93, abs=0.01 )
 
-    
-    
+
 def test_server_rawrap( url_verify ):
     url, verify = url_verify
     ra0 = 359.9
@@ -85,7 +87,7 @@ def test_server_rawrap( url_verify ):
 
     res = requests.post( f"{url}/{ra0}/{ra1}/{dec0}/{dec1}", verify=verify )
     assert res.status_code == 200
-    
+
     data = res.json()
     assert len( data['ra'] ) == 44
     highra = [ r for r in data['ra'] if r > 180. ]
@@ -93,7 +95,31 @@ def test_server_rawrap( url_verify ):
     lowra = [ r for r in data['ra'] if r < 180. ]
     assert max( lowra ) == pytest.approx( 0.09951, abs=2e-5 )
 
-    
+
+def test_big_patch( url_verify ):
+    url, verify = url_verify
+    ra0 = 358.
+    ra1 = 2.
+    dec0 = -40
+    dec1 = -35
+
+    res = requests.post( f"{url}/{ra0}/{ra1}/{dec0}/{dec1}", verify=verify )
+    assert res.status_code == 200
+
+    data = res.json()
+    assert len( data['ra'] ) == 53212
+    ras = numpy.array( data['ra'] )
+    assert ras[ ras > 180. ].min() == pytest.approx( 358.00002, abs=1e-5 )
+    assert ras[ ras < 180. ].max() == pytest.approx( 1.99967, abs=1e-5 )
+    assert min( data['dec'] ) == pytest.approx( -39.99988, abs=1e-5 )
+    assert max( data['dec'] ) == pytest.approx( -35.00012, abs=1e-5 )
+
+    # I did this to plot it to make sure it filled out the rectangle
+    # with open("junk.dat", "w") as ofp:
+    #     for i in range(len(data['ra'])):
+     #        ofp.write( f"{data['ra'][i]} {data['dec'][i]}\n" )
+
+
 def test_failure_modes( url_verify ) :
     url, verify = url_verify
 
@@ -101,18 +127,22 @@ def test_failure_modes( url_verify ) :
     assert res.status_code == 500
     assert res.text == "Error converting ra/dec values to float"
 
-    res = requests.post( f"{url}/20./21./0./0.1", verify=verify )
+    res = requests.post( f"{url}/-1./1./0./1.", verify=verify )
     assert res.status_code == 500
-    assert res.text == "Error, can't handle Δra or Δdec > 55 arcmin"
-    
-    res = requests.post( f"{url}/20./20.1/-1./0.5", verify=verify )
-    assert res.status_code == 500
-    assert res.text == "Error, can't handle Δra or Δdec > 55 arcmin"
+    assert res.text == "Error, invalid coordinates; δ must be [-90,90], α must be [0,360)"
 
-    res = requests.post( f"{url}/359.5/0.5/0./0.2", verify=verify )
+    res = requests.post( f"{url}/0./1./89.9/90.1", verify=verify )
     assert res.status_code == 500
-    assert res.text == "Error, can't handle Δra or Δdec > 55 arcmin"
-    
+    assert res.text == "Error, invalid coordinates; δ must be [-90,90], α must be [0,360)"
+
+    res = requests.post( f"{url}/0./1./-90.1/-89.9", verify=verify )
+    assert res.status_code == 500
+    assert res.text == "Error, invalid coordinates; δ must be [-90,90], α must be [0,360)"
+
+    res = requests.post( f"{url}/20./20.1/89.85/89.95", verify=verify )
+    assert res.status_code == 500
+    assert res.text == "Error, currently can't handle poles (|δ|>89.9)"
+
 
 def test_server_vs_noirlab( url_verify, sky_range ):
     url, verify = url_verify
@@ -141,4 +171,4 @@ def test_server_vs_noirlab( url_verify, sky_range ):
     assert min( dldata['dec'] ) == pytest.approx( min( data['dec'] ), abs=2e-6 )
     assert max( dldata['dec'] ) == pytest.approx( max( data['dec'] ), abs=2e-6 )
 
-    
+
