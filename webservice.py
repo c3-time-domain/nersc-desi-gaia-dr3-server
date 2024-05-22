@@ -53,52 +53,63 @@ def gaiarect( ra0, ra1, dec0, dec1, maxmag=None, minmag=None ):
         tmp = ra0
         ra0 = ra1
         ra1 = tmp
-    dra = ra1 - ra0
 
-    # Pick spots around the edge in hopes that we get all overlapping pixels
-    # The area cut above means that no pixel will be entirely inside the rectangle
-    ras = numpy.array( [ ra0, ra0+dra/4., ra0+dra/2., ra0+3.*dra/4., ra1,
-                         ra0, ra1,
-                         ra0, ra1,
-                         ra0, ra1,
-                         ra0, ra0+dra/4., ra0+dra/2., ra0+3.*dra/4., ra1 ] )
-    decs = numpy.array( [ dec0, dec0, dec0, dec0, dec0,
-                          dec0+ddec/4., dec0+ddec/4.,
-                          dec0+ddec/2., dec0+ddec/2.,
-                          dec0+3.*ddec/4., dec0+3.*ddec/4.,
-                          dec1, dec1, dec1, dec1, dec1 ] )
-
+    if ( dec0 < -90. ) or ( dec1 > 90. ) or ( ra0 < 0. ) or ( ra1 >= 360. ):
+        return f"Error, invalid coordinates; δ must be [-90,90], α must be [0,360)", 500
+    
+    if ( dec1 > 89.9 ) or ( dec1 < -89.9 ):
+        return f"Error, currently can't handle poles (|δ|>89)", 500
+    
     # Try to detect ra around 0
     cyclic = False
     if ( ra1 - ra0 ) > 180.:
-        app.logger.debug( "Detected ra around 0" )
         cyclic = True
         tmp = ra0
         ra0 = ra1
-        ra1 = tmp
-        dra = (360.-ra0) + ra1
-        # These aren't evenly spaced, but whatevs
-        ras = numpy.array( [ ra0, ra0+(360.-ra0)/2., 0., ra1/2., ra1,
-                             ra0, ra1,
-                             ra0, ra1,
-                             ra0, ra1,
-                             ra0, ra0+(360.-ra0)/2., 0., ra1/2., ra1 ] )
-        decs = numpy.array( [ dec0, dec0, dec0, dec0, dec0,
-                              dec0+ddec/4., dec0+ddec/4.,
-                              dec0+ddec/2., dec0+ddec/2.,
-                              dec0+3.*ddec/4., dec0+3.*ddec/4.,
-                              dec1, dec1, dec1, dec1, dec1 ] )
+        ra1 = tmp + 360.
+    dra = ra1 - ra0
 
-    app.logger.debug( f"ra0={ra0}, ra1={ra1}, dec0={dec0}, dec1={dec1}, "
-                      f"dra={dra}, ddec={ddec}, ras={ras}, decs={decs}" )
-    app.logger.debug( f"ras={ras}, decs={decs}" )
+    # To make sure that we hit all of the possible overlapping healpix, we need very fine
+    #   sampling at the edges (in case it's a small overlap), and than sampling that's
+    #   roughly the size of a healpix in the middle.  Because healpix will in general
+    #   be tilted relative to ra/dec lines, I'm going to use pixsize/2 as the sampling
+    #   spacing internally.  Externally, pixsize/8., though we should probably do even
+    #   better than that.  (Thought required.)
+    # (Is there a better way to figure out which healpix are overlapped by a rectangle?)
 
-    # Punt if too big of a patch was requested
-    # (This dra is bad for dec close to the poles....)
+    ras = []
+    decs = []
+
     pixsize = healpy.nside2resol( 32 ) * 180. / math.pi
-    if ( dra * math.cos( (dec0+dec1)/2. * math.pi / 180. ) > pixsize/2. ) or ( ddec > pixsize/2. ):
-        app.logger.error( f"Error: ({ra0:.4f}:{ra1:.4f} , {dec0:.4f}:{dec1:.4f}) is too big a rectangle" )
-        return f"Error, can't handle Δra or Δdec > {60.*pixsize/2.:.0f} arcmin", 500
+    ndecedge = max( 2, int(math.ceil( ( dec1 - dec0 ) / ( pixsize / 8. ) )) )
+
+    for deci in range(ndecedge+1):
+        dec = dec0 + deci * ( dec1 - dec0 ) / ndecedge
+        edgeraonly = False
+        if ( deci == 0 ) or ( deci == ndecedge-1 ):
+            pixfracra = 8
+        elif deci % 4 == 0:
+            pixfracra = 2
+        else:
+            egeraonly = True
+
+        if edgeraonly = True:
+            decs.extend( [ dec, dec ] )
+            ras.extend( [ ra0, ra1 ] )
+        else:
+            nra = max( 2., int(math.ceil( ( ra1 - ra0 ) /
+                                          ( pixsize / picfracra / math.cos( dec * math.pi / 180. ) )
+                                         )) )
+            decs.extend( [ dec for i in range(nra+1) ] )
+            ras.extend( [ ra0 + i * ( ra1 - ra0 ) / nra for i in range(nra+1) ] )
+
+    ras = numpy.array( ras )
+    ras[ ras >= 360. ] -= 360.
+    decs = numpy.array( decs )
+                                        
+    app.logger.debug( f"ra0={ra0}, ra1={ra1}, dec0={dec0}, dec1={dec1}, "
+                      f"len(ras)={len(ras)}, len(decs)={len(decs)}" )
+    app.logger.debug( f"ras={ras}, decs={decs}" )
 
     hps = set( healpy.ang2pix( 32, ras, decs, nest=True, lonlat=True ) )
     app.logger.debug( f"For ({ra0:.4f}:{ra1:.4f} , {dec0:.4f}:{dec1:.4f}), reading files for healpix: {hps}" )
@@ -143,6 +154,6 @@ def gaiarect( ra0, ra1, dec0, dec1, maxmag=None, minmag=None ):
     app.logger.debug( f"Returning {len(retval['ra'])} stars" )
     return retval
 
-@app.route( "/hello", methods=['GET','POST'], strict_slashes=False )
-def hello():
-    return "Hello, world"
+@app.route( "/", methods=['GET','POST'], strict_slashes=False )
+def root():
+    return "Hit /gaiarect/ra0/ra1/dec0/dec1 , optionally adding /maxmag/minmag"
