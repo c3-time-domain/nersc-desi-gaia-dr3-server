@@ -58,7 +58,7 @@ def gaiarect( ra0, ra1, dec0, dec1, maxmag=None, minmag=None ):
         return f"Error, invalid coordinates; δ must be [-90,90], α must be [0,360)", 500
     
     if ( dec1 > 89.9 ) or ( dec1 < -89.9 ):
-        return f"Error, currently can't handle poles (|δ|>89)", 500
+        return f"Error, currently can't handle poles (|δ|>89.9)", 500
     
     # Try to detect ra around 0
     cyclic = False
@@ -93,13 +93,13 @@ def gaiarect( ra0, ra1, dec0, dec1, maxmag=None, minmag=None ):
         else:
             egeraonly = True
 
-        if edgeraonly = True:
+        if edgeraonly:
             decs.extend( [ dec, dec ] )
             ras.extend( [ ra0, ra1 ] )
         else:
-            nra = max( 2., int(math.ceil( ( ra1 - ra0 ) /
-                                          ( pixsize / picfracra / math.cos( dec * math.pi / 180. ) )
-                                         )) )
+            nra = max( 2, int(math.ceil( ( ra1 - ra0 ) /
+                                         ( pixsize / pixfracra / math.cos( dec * math.pi / 180. ) )
+                                        )) )
             decs.extend( [ dec for i in range(nra+1) ] )
             ras.extend( [ ra0 + i * ( ra1 - ra0 ) / nra for i in range(nra+1) ] )
 
@@ -137,7 +137,7 @@ def gaiarect( ra0, ra1, dec0, dec1, maxmag=None, minmag=None ):
         t = Table.read( datadir / f"healpix-{hp:05d}.fits" )
         t = t[ ( t['DEC'] >= dec0 ) & ( t['DEC'] <= dec1 ) ]
         if cyclic:
-            t = t[ ( t['RA'] >= ra0 ) | ( t['RA'] <= ra1 ) ]
+            t = t[ ( t['RA'] >= ra0 ) | ( t['RA'] <= ( ra1 - 360. ) ) ]
         else:
             t = t[ ( t['RA'] >= ra0 ) & ( t['RA'] <= ra1 ) ]
         if maxmag is not None:
