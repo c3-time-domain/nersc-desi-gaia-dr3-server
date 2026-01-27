@@ -114,6 +114,7 @@ def gaiarect( ra0, ra1, dec0, dec1, maxmag=None, minmag=None ):
 
     # Make the keywords of the returns the same as what you'd get from NOIRLab Data Lab
     retval = {
+        'source_id': [],
         'ra': [],
         'dec': [],
         'ra_error': [],
@@ -127,7 +128,9 @@ def gaiarect( ra0, ra1, dec0, dec1, maxmag=None, minmag=None ):
         'pm': [],
         'pmra': [],
         'pmdec': [],
-        'classprob_dsc_combmod_star': []
+        'classprob_dsc_combmod_star': [],
+        'classprob_dsc_combmod_quasar': [],
+        'classprob_dsc_combmod_galaxy': []
     }
 
     datadir = pathlib.Path( "/data" )
