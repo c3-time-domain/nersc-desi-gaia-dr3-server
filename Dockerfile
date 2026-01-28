@@ -1,10 +1,9 @@
 #
-# docker build -t registry.nersc.gov/m4616/raknop/nersc-desi-gaia-dr3-server .
+# docker build -t registry.nersc.gov/m4616/raknop/nersc-desi-gaia-dr3-server:yyyymmdd .
 #
 
-FROM rknop/devuan-daedalus-rknop AS base
-
-MAINTAINER Rob Knop <raknop@lbl.gov>
+FROM debian:trixie-20260112 AS base
+LABEL maintainer="Rob Knop <raknop@lbl.gov>"
 
 SHELL [ "/bin/bash", "-c" ]
 
@@ -53,5 +52,4 @@ WORKDIR /code
 # This next one gets bind mounted to /global/cfs/cdirs/cosmo/data/gaia/dr3/healpix
 RUN mkdir /data
 
-CMD [ "gunicorn", "-w", "4", "-b", "0.0.0.0:8080", "--timeout", "0", \
-      "webservice:app" ]
+CMD [ "gunicorn", "-w", "4", "-b", "0.0.0.0:8080", "-k", "gevent", "--timeout", "0", "webservice:app" ]
