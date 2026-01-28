@@ -29,7 +29,7 @@ RUN python3 -mvenv /venv
 
 RUN source /venv/bin/activate \
   && pip install \
-       gunicorn flask numpy astropy healpy
+       gunicorn flask numpy astropy healpy gevent
 
 RUN mkdir /tmp/build
 RUN mkdir /code
