@@ -29,7 +29,8 @@ app.logger.setLevel( os.getenv( 'GAIA_DR3_SERVER_LOG_LEVEL', _default_log_level 
             methods=['GET','POST'], strict_slashes=False )
 def gaiarect( ra0, ra1, dec0, dec1, maxmag=None, minmag=None ):
     t0 = time.monotonic()
-    app.logger.info( f"Got request to {flask.request.base_url}" )
+    pid = os.getpid()
+    app.logger.info( f"PID {pid} got request to {flask.request.base_url}" )
 
     try:
         try:
@@ -70,6 +71,8 @@ def gaiarect( ra0, ra1, dec0, dec1, maxmag=None, minmag=None ):
             ra0 = ra1
             ra1 = tmp + 360.
 
+        app.logger.debug( f"PID {pid} has validated input" )
+
         # To make sure that we hit all of the possible overlapping healpix, we need very fine
         #   sampling at the edges (in case it's a small overlap), and than sampling that's
         #   roughly the size of a healpix in the middle.  Because healpix will in general
@@ -108,13 +111,15 @@ def gaiarect( ra0, ra1, dec0, dec1, maxmag=None, minmag=None ):
         ras[ ras >= 360. ] -= 360.
         decs = numpy.array( decs )
 
-        app.logger.debug( f"ra0={ra0}, ra1={ra1}, dec0={dec0}, dec1={dec1}, "
-                          f"len(ras)={len(ras)}, len(decs)={len(decs)}" )
-        app.logger.debug( f"ras={ras}, decs={decs}" )
+        app.logger.debug( f"PID {pid} has made the ra/dec grid\n"
+                          f"        ra0={ra0}, ra1={ra1}, dec0={dec0}, dec1={dec1}, "
+                          f"len(ras)={len(ras)}, len(decs)={len(decs)}\n"
+                          f"        ras={ras}, decs={decs}" )
+
 
         hps = set( healpy.ang2pix( 32, ras, decs, nest=True, lonlat=True ) )
         # ... I hate that the string value of numpy.int64(6812) is "np.int64(6812)"
-        app.logger.debug( f"For ({ra0:.4f}:{ra1:.4f} , {dec0:.4f}:{dec1:.4f}), "
+        app.logger.debug( f"PID {pid} for ({ra0:.4f}:{ra1:.4f} , {dec0:.4f}:{dec1:.4f}), "
                           f"reading files for healpix: {[int(h) for h in hps]}" )
 
         # Make the keywords of the returns the same as what you'd get from NOIRLab Data Lab
@@ -140,8 +145,9 @@ def gaiarect( ra0, ra1, dec0, dec1, maxmag=None, minmag=None ):
 
         datadir = pathlib.Path( "/data" )
         for hp in hps:
-            app.logger.debug( f"Reading healpix-{hp:05d}.fits..." )
+            app.logger.debug( f"PID {pid} reading healpix-{hp:05d}.fits..." )
             t = Table.read( datadir / f"healpix-{hp:05d}.fits" )
+            app.logger.debug( f"...PID {pid} read healpix-{hp:05d}.fits." )
             t = t[ ( t['DEC'] >= dec0 ) & ( t['DEC'] <= dec1 ) ]
             if cyclic:
                 t = t[ ( t['RA'] >= ra0 ) | ( t['RA'] <= ( ra1 - 360. ) ) ]
@@ -157,8 +163,9 @@ def gaiarect( ra0, ra1, dec0, dec1, maxmag=None, minmag=None ):
                 #  encoder doesn't know how to handle numpy float32
                 t[ kw.upper() ] = t[ kw.upper() ].astype( float )
                 retval[ kw ].extend( list( t[ kw.upper() ] ) )
+            app.logger.debug( f"PID {pid} done with healpix-{hp:05d}.fits" )
 
-        app.logger.info( f"Returning {len(retval['ra'])} stars after {time.monotonic()-t0:.2f}s" )
+        app.logger.info( f"PID {pid} returning {len(retval['ra'])} stars after {time.monotonic()-t0:.2f}s" )
         return retval
     except Exception as ex:
         app.logger.error( f"Exception after {time.monotonic()-t0:.2f}s : {ex}" )
