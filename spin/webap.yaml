@@ -24,7 +24,7 @@ spec:
         workload.user.cattle.io/workloadselector: deployment-ls4-nersc-gaia-dr3-webap
     spec:
       containers:
-      - image: registry.nersc.gov/m4616/raknop/nersc-desi-gaia-dr3-server
+      - image: registry.nersc.gov/m4616/raknop/nersc-desi-gaia-dr3-server:20260602b
         imagePullPolicy: Always
         name: decat-upload
         resources: {}
