@@ -10,7 +10,7 @@ SHELL [ "/bin/bash", "-c" ]
 RUN apt-get update \
     && DEBIAN_FRONTEND="noninteractive" apt-get -y upgrade \
     && DEBIAN_FRONTEND="noninteractive" TZ="US/Pacific" apt-get -y install -y \
-         python3 python3-venv \
+         net-tools procps python3 python3-venv \
     && apt-get -y autoremove \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
