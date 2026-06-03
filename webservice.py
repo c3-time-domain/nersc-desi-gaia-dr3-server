@@ -7,9 +7,6 @@ mplconfigdir.mkdir( exist_ok=True )
 import os
 os.environ['MPLCONFIGDIR'] = '/tmp/matplotlib'
 
-import sys
-import io
-import re
 import math
 import logging
 
@@ -40,24 +37,29 @@ def gaiarect( ra0, ra1, dec0, dec1, maxmag=None, minmag=None ):
         minmag = None if minmag is None else float(minmag)
     except Exception as ex:
         app.logger.error( ex )
-        return f"Error converting ra/dec values to float", 500
+        return "Error converting ra/dec values to float", 500
+
+    app.logger.debug( f"Got request to {flask.request.base_url}" )
 
     if dec0 > dec1:
         tmp = dec0
         dec0 = dec1
         dec1 = tmp
-    ddec = dec1 - dec0
     if ra0 > ra1:
         tmp = ra0
         ra0 = ra1
         ra1 = tmp
 
     if ( dec0 < -90. ) or ( dec1 > 90. ) or ( ra0 < 0. ) or ( ra1 >= 360. ):
-        return f"Error, invalid coordinates; δ must be [-90,90], α must be [0,360)", 500
-    
-    if ( dec1 > 89.9 ) or ( dec1 < -89.9 ):
-        return f"Error, currently can't handle poles (|δ|>89.9)", 500
-    
+        app.logger.error( f"Error, invalid coordinates ({ra0}, {ra1}, {dec0}, {dec1}); "
+                          f"δ must be [-90,90], α must be [0,360)" )
+        return "Error, invalid coordinates; δ must be [-90,90], α must be [0,360)", 500
+
+    if ( dec1 > 89.9 ) or ( dec0 < -89.9 ):
+        app.logger.error( f"Error, invalid dec ({dec0}, {dec1}): "
+                          f"coordinates; δ must be [-89.9,89.9], α must be [0,360)" )
+        return "Error, currently can't handle poles (|δ|>89.9)", 500
+
     # Try to detect ra around 0
     cyclic = False
     if ( ra1 - ra0 ) > 180.:
@@ -65,7 +67,6 @@ def gaiarect( ra0, ra1, dec0, dec1, maxmag=None, minmag=None ):
         tmp = ra0
         ra0 = ra1
         ra1 = tmp + 360.
-    dra = ra1 - ra0
 
     # To make sure that we hit all of the possible overlapping healpix, we need very fine
     #   sampling at the edges (in case it's a small overlap), and than sampling that's
@@ -89,7 +90,7 @@ def gaiarect( ra0, ra1, dec0, dec1, maxmag=None, minmag=None ):
         elif deci % 4 == 0:
             pixfracra = 2
         else:
-            egeraonly = True
+            edgeraonly = True
 
         if edgeraonly:
             decs.extend( [ dec, dec ] )
@@ -104,7 +105,7 @@ def gaiarect( ra0, ra1, dec0, dec1, maxmag=None, minmag=None ):
     ras = numpy.array( ras )
     ras[ ras >= 360. ] -= 360.
     decs = numpy.array( decs )
-                                        
+
     app.logger.debug( f"ra0={ra0}, ra1={ra1}, dec0={dec0}, dec1={dec1}, "
                       f"len(ras)={len(ras)}, len(decs)={len(decs)}" )
     app.logger.debug( f"ras={ras}, decs={decs}" )
@@ -135,6 +136,7 @@ def gaiarect( ra0, ra1, dec0, dec1, maxmag=None, minmag=None ):
 
     datadir = pathlib.Path( "/data" )
     for hp in hps:
+        app.logger.debug( f"Reading healpix-{hp:05d}.fits..." )
         t = Table.read( datadir / f"healpix-{hp:05d}.fits" )
         t = t[ ( t['DEC'] >= dec0 ) & ( t['DEC'] <= dec1 ) ]
         if cyclic:
@@ -152,8 +154,9 @@ def gaiarect( ra0, ra1, dec0, dec1, maxmag=None, minmag=None ):
             t[ kw.upper() ] = t[ kw.upper() ].astype( float )
             retval[ kw ].extend( list( t[ kw.upper() ] ) )
 
-    app.logger.debug( f"Returning {len(retval['ra'])} stars" )
+    app.logger.info( f"Returning {len(retval['ra'])} stars" )
     return retval
+
 
 @app.route( "/", methods=['GET','POST'], strict_slashes=False )
 def root():
