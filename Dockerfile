@@ -45,6 +45,9 @@ FROM base AS final
 
 COPY --from=build /venv/ /venv/
 ENV PATH=/venv/bin:$PATH
+# ...gunicorn seems to want to write a dotfile to my home directory?????????
+# Ah, it's a control socket.  Why it writes it to $HOME, I don't know.
+ENV HOME=/tmp
 
 COPY --from=build /code/ /code/
 WORKDIR /code
