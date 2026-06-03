@@ -52,4 +52,4 @@ WORKDIR /code
 # This next one gets bind mounted to /global/cfs/cdirs/cosmo/data/gaia/dr3/healpix
 RUN mkdir /data
 
-CMD [ "gunicorn", "-w", "4", "-b", "0.0.0.0:8080", "-k", "gevent", "--timeout", "0", "webservice:app" ]
+CMD [ "gunicorn", "-w", "4", "-b", "0.0.0.0:8080", "-k", "gevent", "--timeout", "30", "webservice:app" ]
