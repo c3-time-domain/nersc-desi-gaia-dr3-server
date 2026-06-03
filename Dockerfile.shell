@@ -1,0 +1,45 @@
+#
+# docker build -t registry.nersc.gov/m4616/raknop/nersc-desi-gaia-dr3-server:yyyymmdd .
+#
+
+FROM debian:trixie-20260112 AS base
+LABEL maintainer="Rob Knop <raknop@lbl.gov>"
+
+SHELL [ "/bin/bash", "-c" ]
+
+RUN apt-get update \
+    && DEBIAN_FRONTEND="noninteractive" apt-get -y upgrade \
+    && DEBIAN_FRONTEND="noninteractive" TZ="US/Pacific" apt-get -y install -y \
+         net-tools postgresql-client-17 procps python3 python3-psycopg python3-venv \
+    && apt-get -y autoremove \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# ======================================================================
+# pip installs a full dev environment, which we don't want
+#  in our final image.  (400 unnecessary MB.)
+
+FROM base AS build
+
+RUN apt-get update \
+    && DEBIAN_FRONTEND="noninteractive" apt-get install -y python3-pip
+
+RUN mkdir /venv
+RUN python3 -mvenv --system-site-packages /venv
+
+RUN source /venv/bin/activate \
+  && pip install numpy astropy healpy packaging
+
+# ======================================================================
+
+FROM base AS final
+
+COPY --from=build /venv/ /venv/
+ENV PATH=/venv/bin:$PATH
+ENV HOME=/tmp
+
+RUN mkdir /gaia-dr3
+RUN mkdir /source
+WORKDIR /source
+
+CMD [ "tail", "-f", "/etc/issue" ]
