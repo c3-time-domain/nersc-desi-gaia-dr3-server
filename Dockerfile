@@ -2,7 +2,7 @@
 # docker build -t registry.nersc.gov/m4616/raknop/nersc-desi-gaia-dr3-server:yyyymmdd .
 #
 
-FROM debian:trixie-20260112 AS base
+FROM debian:trixie-20260518 AS base
 LABEL maintainer="Rob Knop <raknop@lbl.gov>"
 
 SHELL [ "/bin/bash", "-c" ]
@@ -10,7 +10,7 @@ SHELL [ "/bin/bash", "-c" ]
 RUN apt-get update \
     && DEBIAN_FRONTEND="noninteractive" apt-get -y upgrade \
     && DEBIAN_FRONTEND="noninteractive" TZ="US/Pacific" apt-get -y install -y \
-         net-tools procps python3 python3-venv \
+         net-tools postgresql-client procps python3 python3-venv python3-psycopg python3-packaging \
     && apt-get -y autoremove \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -25,11 +25,14 @@ RUN apt-get update \
     && DEBIAN_FRONTEND="noninteractive" apt-get install -y python3-pip
 
 RUN mkdir /venv
-RUN python3 -mvenv /venv
+RUN python3 -mvenv --system-site-packages /venv
 
+# RUN source /venv/bin/activate \
+#   && pip install \
+#        gunicorn flask numpy astropy healpy gevent
 RUN source /venv/bin/activate \
   && pip install \
-       gunicorn flask numpy astropy healpy gevent
+       flask gevent gunicorn
 
 RUN mkdir /tmp/build
 RUN mkdir /code
