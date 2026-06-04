@@ -38,7 +38,7 @@ spec:
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: postgres-secrets
+              name: secrets
               key: pgpass
         image: registry.nersc.gov/m4616/postgres-q3c:20260603
         imagePullPolicy: IfNotPresent
